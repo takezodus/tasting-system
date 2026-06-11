@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>試食会 評価システム</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Inter:wght@400;600;700&display=swap');
+  :root {
+    --cream:#FAF8F3; --white:#FFFFFF; --charcoal:#1C1C1C; --mid-grey:#6B6B6B;
+    --light-grey:#E8E5DF; --accent:#C8502A; --accent-light:#F2E8E3;
+    --accent-mid:#E07A56; --success:#3A7D44; --border:#D4CFC7;
+    --bg:var(--cream); --card:#FFFFFF; --text:#1C1C1C; --text-sub:#6B6B6B;
+    --border-c:#D4CFC7; --input-bg:#FFFFFF;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{
+      --bg:#181818; --card:#242424; --text:#F0EEEA; --text-sub:#A0A0A0;
+      --border-c:#3A3A3A; --input-bg:#2C2C2C; --cream:#242424; --white:#242424;
+      --charcoal:#F0EEEA; --mid-grey:#A0A0A0; --light-grey:#3A3A3A; --border:#3A3A3A;
+    }
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Noto Sans JP',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6;}
+  .app-header{background:#1C1C1C !important;padding:13px 24px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+  .header-title{font-family:'Inter',sans-serif;font-size:13px;font-weight:700;color:#FFFFFF !important;letter-spacing:.08em;text-transform:uppercase;}
+  .header-sub{font-size:10px;color:#999 !important;margin-top:1px;}
+  .user-badge{background:var(--accent);color:#fff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;}
+  .btn-header{background:transparent;border:1.5px solid rgba(255,255,255,0.5);color:#FFFFFF !important;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .btn-header:hover{background:rgba(255,255,255,0.15);border-color:rgba(255,255,255,0.8);}
+  .screen{display:none;}
+  .screen.active{display:block;}
+  #loginScreen.active{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:30px 16px;}
+  .login-card{background:var(--card);border:1px solid var(--border-c);border-radius:14px;padding:40px 32px;width:100%;max-width:380px;}
+  .login-logo{width:50px;height:50px;background:var(--charcoal);border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 20px;}
+  .login-title{font-size:20px;font-weight:700;text-align:center;margin-bottom:4px;}
+  .login-sub{font-size:12px;color:var(--text-sub);text-align:center;margin-bottom:28px;}
+  .login-error{background:#fff0ed;border:1px solid #f5bfb0;color:#c0392b;padding:9px 13px;border-radius:7px;font-size:12px;margin-bottom:14px;display:none;}
+  .form-group{margin-bottom:16px;}
+  .form-label{display:block;font-size:11px;font-weight:600;color:var(--text-sub);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px;}
+  .form-select,.form-input,.form-textarea{width:100%;padding:10px 13px;border:1.5px solid var(--border-c);border-radius:8px;font-size:14px;font-family:inherit;background:var(--input-bg);color:var(--text);transition:border-color .15s;}
+  .form-select:focus,.form-input:focus,.form-textarea:focus{outline:none;border-color:var(--accent);}
+  .form-textarea{resize:vertical;min-height:85px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:all .15s;font-family:inherit;}
+  .btn-primary{background:var(--accent);color:#fff;width:100%;justify-content:center;}
+  .btn-primary:hover{background:#b04422;}
+  .btn-outline{background:transparent;border:1.5px solid var(--border-c);color:var(--text);}
+  .btn-outline:hover{border-color:var(--text);}
+  .btn-sm{padding:6px 12px;font-size:12px;}
+  .btn-danger{background:transparent;border:1.5px solid #e0b0a8;color:#c0392b;}
+  .btn-danger:hover{background:#fff0ed;}
+  .btn-dark{background:var(--charcoal);color:#fff;}
+  .btn-dark:hover{background:#333;}
+  .main-layout{max-width:860px;margin:0 auto;padding:28px 16px 60px;}
+  .section-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:24px;padding-bottom:16px;border-bottom:2px solid var(--accent);}
+  .section-header h2{font-size:19px;font-weight:700;color:var(--text);}
+  .section-header .sub{font-size:12px;color:var(--text-sub);margin-top:3px;}
+  .panel-tabs{display:flex;border-bottom:2px solid var(--border-c);margin-bottom:24px;}
+  .tab-btn{padding:8px 16px;font-size:12px;font-weight:500;color:var(--text-sub);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all .15s;font-family:inherit;}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);font-weight:700;}
+  .tab-panel{display:none;}
+  .tab-panel.active{display:block;}
+  .product-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(256px,1fr));gap:12px;}
+  .product-card{background:var(--card);border:1.5px solid var(--border-c);border-radius:10px;padding:16px;cursor:pointer;transition:all .15s;position:relative;}
+  .product-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(200,80,42,.1);}
+  .product-card.static{cursor:default;}
+  .product-card.static:hover{transform:none;box-shadow:none;border-color:var(--border);}
+  .date-badge{font-size:10px;color:var(--text-sub);background:var(--bg);padding:2px 7px;border-radius:4px;display:inline-block;margin-bottom:8px;}
+  .product-name{font-size:15px;font-weight:700;margin-bottom:9px;line-height:1.4;color:var(--text);}
+  .product-meta{display:flex;gap:12px;padding-top:10px;border-top:1px solid var(--border-c);flex-wrap:wrap;}
+  .meta-item .label{font-size:10px;color:var(--text-sub);}
+  .meta-item .value{font-size:13px;font-weight:600;color:var(--text);}
+  .submitted-badge{position:absolute;top:10px;right:10px;background:var(--success);color:#fff;font-size:10px;padding:2px 7px;border-radius:4px;font-weight:600;}
+  .empty-state{text-align:center;padding:48px 20px;color:var(--mid-grey);font-size:13px;}
+  .eval-card{background:var(--card);border:1px solid var(--border-c);border-radius:11px;padding:22px;margin-bottom:16px;}
+  .eval-card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--accent);margin-bottom:16px;display:flex;align-items:center;gap:7px;}
+  .eval-card-title::before{content:'';display:block;width:3px;height:14px;background:var(--accent);border-radius:2px;}
+  .star-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border-c);}
+  .star-row:last-child{border-bottom:none;}
+  .star-label{font-size:13px;min-width:130px;color:var(--text);}
+  .stars{display:flex;gap:5px;}
+  .star{width:30px;height:30px;background:var(--bg);border:1.5px solid var(--border-c);border-radius:6px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:12px;font-weight:700;color:var(--text-sub);transition:all .1s;user-select:none;}
+  .star.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .star:hover{border-color:var(--accent);}
+  .price-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;overflow:hidden;}
+  .price-input-wrap{display:flex;align-items:center;gap:6px;flex:1;min-width:0;max-width:100%;}
+  .price-input-wrap span{font-size:12px;color:var(--text-sub);white-space:nowrap;flex-shrink:0;}
+  .price-input-wrap input{flex:1;padding:7px 11px;border:1.5px solid var(--border-c);border-radius:7px;font-size:14px;font-family:inherit;background:var(--input-bg);color:var(--text);min-width:0;}
+  .price-input-wrap input:focus{outline:none;border-color:var(--accent);}
+  .store-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .store-check{display:flex;align-items:center;gap:9px;padding:10px 12px;border:1.5px solid var(--border-c);border-radius:8px;cursor:pointer;transition:all .15s;user-select:none;background:var(--card);}
+  .store-check:hover{border-color:var(--accent);}
+  .store-check.checked{border-color:var(--accent);}
+  .check-icon{width:18px;height:18px;border:2px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s;font-size:11px;}
+  .store-check.checked .check-icon{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .store-name{font-size:13px;font-weight:500;color:var(--text);}
+  .product-info-bar{background:var(--accent);border-radius:10px;padding:16px 20px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+  .product-info-bar .pname{font-size:16px;font-weight:700;color:#fff;}
+  .product-info-bar .pmeta{font-size:11px;color:rgba(255,255,255,0.8);margin-top:2px;}
+  .product-info-bar .pdate{font-size:11px;color:#fff;background:rgba(0,0,0,0.2);padding:4px 9px;border-radius:4px;}
+  .result-item{background:var(--card);border:1px solid var(--border-c);border-radius:10px;padding:16px;margin-bottom:11px;}
+  .result-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:11px;padding-bottom:10px;border-bottom:1px solid var(--border-c);}
+  .score-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:6px;margin-bottom:11px;}
+  .score-box{text-align:center;background:var(--bg);border-radius:6px;padding:6px 3px;}
+  .score-box .s-label{font-size:9px;color:var(--text-sub);margin-bottom:2px;}
+  .score-box .s-val{font-size:16px;font-weight:700;color:var(--accent);}
+  .text-result-item{margin-bottom:8px;}
+  .text-result-item .q{font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;margin-bottom:3px;}
+  .text-result-item .a{font-size:13px;background:var(--bg);padding:7px 11px;border-radius:6px;white-space:pre-wrap;color:var(--text);}
+  .history-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--card);border:1px solid var(--border-c);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:all .15s;}
+  .history-item:hover{border-color:var(--accent);}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;align-items:center;justify-content:center;padding:16px;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--card);border-radius:12px;padding:26px;width:100%;max-width:460px;max-height:92vh;overflow-y:auto;}
+  .modal-title{font-size:16px;font-weight:700;margin-bottom:18px;color:var(--text);}
+  .modal-actions{display:flex;gap:8px;margin-top:20px;justify-content:flex-end;}
+  .nav-back{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--text-sub);cursor:pointer;margin-bottom:20px;font-weight:500;}
+  .nav-back:hover{color:var(--text);}
+  .submitted-view{text-align:center;padding:44px 16px;}
+  .submitted-view .icon{font-size:42px;margin-bottom:13px;}
+  .submitted-view h3{font-size:17px;font-weight:700;margin-bottom:6px;}
+  .submitted-view p{color:var(--text-sub);font-size:13px;}
+  .pw-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .pw-table th{text-align:left;padding:8px 12px;background:var(--bg);font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--text-sub);}
+  .pw-table td{padding:10px 12px;border-bottom:1px solid var(--border-c);color:var(--text);}
+  .pw-table tr:last-child td{border-bottom:none;}
+  .pw-mono{font-family:'Courier New',monospace;background:var(--bg);padding:2px 7px;border-radius:4px;letter-spacing:.1em;font-size:14px;font-weight:700;color:var(--text);}
+
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(0);background:#1C1C1C;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.35);}
+  .toast.show{opacity:1;}
+  .toast.error{background:#C8502A;color:#fff;font-size:14px;padding:13px 22px;}
+
+  .price-choice-btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border:2px solid var(--border-c);border-radius:9px;background:var(--card);color:var(--text);font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;}
+  .price-choice-btn:hover{border-color:var(--accent);}
+  .price-choice-btn.selected-ok{border-color:var(--success);background:rgba(58,125,68,.12);color:var(--success);}
+  .price-choice-btn.selected-revise{border-color:var(--accent);background:var(--accent-light);color:var(--accent);}
+  .choice-icon{font-size:15px;font-weight:700;}
+  @media(max-width:560px){
+    .form-row{grid-template-columns:1fr;}
+    .score-grid{grid-template-columns:repeat(3,1fr);}
+    .store-grid{grid-template-columns:1fr 1fr;}
+    .login-card{padding:24px 18px;}
+    .price-row{flex-direction:column;align-items:flex-start;}
+    .main-layout{padding:20px 14px 80px;}
+    /* タップしやすいサイズに */
+    .star{width:36px;height:36px;font-size:14px;}
+    .store-check{padding:13px 12px;}
+    .price-choice-btn{flex:1;justify-content:center;padding:13px 10px;font-size:14px;}
+    .btn-primary,.btn-dark{padding:13px 16px;font-size:14px;}
+    .btn-outline{padding:11px 14px;}
+    .eval-card{padding:18px 14px;}
+    .product-card{padding:14px;}
+    .product-name{font-size:14px;}
+    /* ヘッダー */
+    .app-header{padding:11px 16px;}
+    .header-title{font-size:12px;}
+    .user-badge{font-size:10px;padding:3px 9px;}
+    /* スクロール中にフォームが隠れないよう余白 */
+    #actualEvalForm{padding-bottom:20px;}
+    /* タブ */
+    .tab-btn{padding:8px 10px;font-size:11px;}
+    /* モーダル */
+    .modal{padding:22px 18px;}
+    /* トースト横幅 */
+    .toast{max-width:90vw;white-space:normal;text-align:center;}
+  }
+  /* iOSのタップハイライト除去 */
+  .star,.store-check,.price-choice-btn,.product-card,.history-item{-webkit-tap-highlight-color:transparent;}
+  /* スムーズスクロール */
+  html{scroll-behavior:smooth;}
+  /* iOSでinputのズームを防ぐ（font-size:16px以上） */
+  input[type="number"],input[type="text"],input[type="password"],select,textarea{font-size:16px;}
+  @media(min-width:561px){
+    input[type="number"],input[type="text"],input[type="password"],select,textarea{font-size:14px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- LOGIN -->
+<div id="loginScreen" class="screen active">
+  <div class="login-card">
+    <div class="login-logo">🍽️</div>
+    <div class="login-title">試食会 評価システム</div>
+    <div class="login-sub">商品開発部 / Product Development</div>
+    <div id="loginError" class="login-error"></div>
+    <div class="form-group">
+      <label class="form-label">アカウント</label>
+      <select class="form-select" id="loginSelect">
+        <option value="">— 選択してください —</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">パスワード</label>
+      <input type="password" class="form-input" id="loginPw" placeholder="4桁の数字" maxlength="4"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-primary" onclick="doLogin()">ログイン</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="mainScreen" class="screen">
+    <header class="app-header">
+    <div>
+      <div class="header-title">試食会 評価システム</div>
+      <div class="header-sub">Product Tasting Evaluation</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:9px;">
+      <span class="user-badge" id="headerUser"></span>
+      <button class="btn-header" onclick="logout()">ログアウト</button>
+    </div>
+  </header>
+
+  <!-- ADMIN -->
+  <div id="adminView" class="main-layout" style="display:none;">
+    <div class="section-header">
+      <div><h2>管理者ダッシュボード</h2><div class="sub">試食会の登録・評価結果の確認</div></div>
+    </div>
+    <div class="panel-tabs">
+      <button class="tab-btn active" id="tabBtnProducts" onclick="showTab('tabProducts')">🗂 商品管理</button>
+      <button class="tab-btn" id="tabBtnResults"  onclick="showTab('tabResults')">📊 評価結果</button>
+      <button class="tab-btn" id="tabBtnPW"       onclick="showTab('tabPW')">🔑 パスワード</button>
+    </div>
+    <div id="tabProducts" class="tab-panel active">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <div style="font-size:12px;color:var(--mid-grey);">登録済み商品</div>
+        <button class="btn btn-primary btn-sm" style="width:auto;" onclick="openAddProduct()">+ 商品を追加</button>
+      </div>
+      <div id="adminProductGrid"></div>
+    </div>
+    <div id="tabResults" class="tab-panel">
+      <div style="margin-bottom:18px;">
+        <label class="form-label">商品を選択</label>
+        <select class="form-select" id="resultProductDropdown" onchange="loadResultsForProduct(this.value)" style="max-width:320px;">
+          <option value="">— 商品を選んでください —</option>
+        </select>
+      </div>
+      <div id="resultsContent"></div>
+    </div>
+    <div id="tabPW" class="tab-panel">
+      <div style="background:var(--white);border:1px solid var(--border);border-radius:10px;overflow:hidden;">
+        <table class="pw-table" id="pwTable"></table>
+      </div>
+      <div style="font-size:11px;color:var(--mid-grey);margin-top:10px;">※ このページは管理者のみ閲覧できます。</div>
+    </div>
+  </div>
+
+  <!-- STAFF -->
+  <div id="staffView" class="main-layout" style="display:none;">
+    <div id="staffProductList">
+      <div class="section-header">
+        <div><h2 id="staffGreeting">こんにちは</h2><div class="sub">評価する商品を選んでください</div></div>
+      </div>
+      <div id="staffProductGrid"></div>
+      <div id="myHistoryWrapper" style="margin-top:32px;display:none;">
+        <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--mid-grey);margin-bottom:9px;">📋 自分の評価履歴</div>
+        <div id="myHistoryList"></div>
+      </div>
+    </div>
+    <div id="evalFormWrapper" style="display:none;">
+      <div class="nav-back" onclick="backToList()">← 商品一覧に戻る</div>
+      <div class="product-info-bar">
+        <div>
+          <div class="pname" id="evalProductName">-</div>
+          <div class="pmeta" id="evalProductMeta">-</div>
+        </div>
+        <div class="pdate" id="evalProductDate">-</div>
+      </div>
+      <div id="submittedView" class="submitted-view" style="display:none;">
+        <div class="icon">✅</div>
+        <h3>評価を送信しました</h3>
+        <p>この商品の評価は送信済みです。<br>内容は変更できません。</p>
+        <div id="submittedDetail" style="margin-top:20px;text-align:left;"></div>
+        <button class="btn btn-outline" style="margin-top:16px;" onclick="backToList()">← 商品一覧に戻る</button>
+      </div>
+      <div id="actualEvalForm">
+        <div class="eval-card">
+          <div class="eval-card-title">1. 味覚・感覚評価</div>
+          <div class="star-row"><span class="star-label">👁️ 見た目</span><div class="stars" data-key="look"></div></div>
+          <div class="star-row"><span class="star-label">👃 香り</span><div class="stars" data-key="aroma"></div></div>
+          <div class="star-row"><span class="star-label">👅 味</span><div class="stars" data-key="taste"></div></div>
+          <div class="star-row"><span class="star-label">⚡ インパクト</span><div class="stars" data-key="impact"></div></div>
+          <div class="star-row"><span class="star-label">🔁 リピートしたいか</span><div class="stars" data-key="repeat"></div></div>
+        </div>
+        <div class="eval-card"><div class="eval-card-title">2. 良かった点</div><textarea class="form-textarea" id="txtGood" placeholder="良かった点を入力"></textarea></div>
+        <div class="eval-card"><div class="eval-card-title">3. 気になった点 / 改善点</div><textarea class="form-textarea" id="txtImprove" placeholder="気になった点や改善点を入力"></textarea></div>
+        <div class="eval-card"><div class="eval-card-title">4. 商品性 / 販売面（マーケティング）の意見</div><textarea class="form-textarea" id="txtMarketing" placeholder="マーケティング・販売面での意見を入力"></textarea></div>
+        <div class="eval-card"><div class="eval-card-title">5. オペレーション面の意見</div><textarea class="form-textarea" id="txtOperation" placeholder="オペレーション面での意見を入力"></textarea></div>
+        <div class="eval-card">
+          <div class="eval-card-title">6. 総合評価</div>
+          <div class="star-row" style="padding-bottom:13px;border-bottom:1px solid var(--light-grey);margin-bottom:13px;">
+            <span class="star-label" style="font-weight:700;">総合評価</span>
+            <div class="stars" data-key="overall"></div>
+          </div>
+          <div style="margin-bottom:15px;" id="priceValiditySection">
+            <div class="form-label">価格の妥当性 <span style="color:var(--accent);">*</span></div>
+            <div style="display:flex;gap:10px;margin-bottom:10px;width:100%;">
+              <button type="button" class="price-choice-btn" id="priceOkBtn" onclick="selectPriceValidity('ok')">
+                <span class="choice-icon">○</span> 妥当
+              </button>
+              <button type="button" class="price-choice-btn" id="priceRevBtn" onclick="selectPriceValidity('revise')">
+                修正あり
+              </button>
+            </div>
+            <div id="priceReviseInput" style="display:none;">
+              <div class="price-input-wrap" style="max-width:220px;">
+                <span>適正価格:</span>
+                <input type="number" id="priceInput" placeholder="例: 15.90" min="0" step="0.01">
+                <span>€</span>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="form-label">導入についての意向（導入すべき店舗）</div>
+            <div class="store-grid" id="storeGrid">
+              <div class="store-check" onclick="toggleStore(this)"><div class="check-icon"></div><span class="store-name">本店</span></div>
+              <div class="store-check" onclick="toggleStore(this)"><div class="check-icon"></div><span class="store-name">ケルン店</span></div>
+              <div class="store-check" onclick="toggleStore(this)"><div class="check-icon"></div><span class="store-name">ビルク店</span></div>
+              <div class="store-check" onclick="toggleStore(this)"><div class="check-icon"></div><span class="store-name">エッセン店</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="eval-card"><div class="eval-card-title">7. 自由コメント</div><textarea class="form-textarea" id="txtFree" placeholder="例: 導入店舗の理由など" style="min-height:95px;"></textarea></div>
+        <div style="display:flex;justify-content:flex-end;gap:9px;margin-top:6px;">
+          <button class="btn btn-outline" onclick="backToList()">キャンセル</button>
+          <button class="btn btn-primary" style="width:auto;" onclick="submitEval()">📤 評価を送信する</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT PRODUCT MODAL -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal">
+    <div class="modal-title" id="productModalTitle">商品を追加</div>
+    <input type="hidden" id="editProductId">
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">試食会実施日 <span style="color:var(--accent);">*</span></label>
+        <input type="date" class="form-input" id="newDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">商品名 <span style="color:var(--accent);">*</span></label>
+        <input type="text" class="form-input" id="newName" placeholder="例: 特製ラーメン">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">販売価格 (€) <span style="color:var(--mid-grey);font-weight:400;font-size:10px;">任意</span></label>
+        <input type="number" class="form-input" id="newPrice" placeholder="例: 15.90" step="0.01">
+      </div>
+      <div class="form-group">
+        <label class="form-label">原価率 (%) <span style="color:var(--mid-grey);font-weight:400;font-size:10px;">任意</span></label>
+        <input type="number" class="form-input" id="newCostRate" placeholder="例: 32" step="0.1" min="0" max="100">
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('productModal')">キャンセル</button>
+      <button class="btn btn-dark" style="width:auto;" onclick="saveProduct()">保存する</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// ★ GASのデプロイURLをここに貼り付けてください ★
+// ============================================================
+const GAS_URL = 'https://script.google.com/macros/s/AKfycbx9dK7ZlMqM61M9_XWe8OB8pzbWQeceKpUdQsV_eTfVPKVF0N08JGJ8D3sy8ORjdWk2/exec';
+// ============================================================
+
+const USERS = [
+  { id:'kusaka', name:'Kyosuke Kusaka', role:'管理者', isAdmin:true,  color:'#1C1C1C', pw:'0315' },
+  { id:'kagami', name:'Ryo Kagami',     role:'幹部',   isAdmin:false, color:'#C8502A', pw:'5819' },
+  { id:'ota',    name:'Ko Ota',         role:'幹部',   isAdmin:false, color:'#2E7D9E', pw:'2764' },
+  { id:'nomura', name:'Kazuki Nomura',  role:'幹部',   isAdmin:false, color:'#3A7D44', pw:'9031' },
+  { id:'okubo',  name:'Ai Okubo',       role:'幹部',   isAdmin:false, color:'#7B5EA7', pw:'6583' },
+  { id:'taira',  name:'Kazuki Taira',   role:'幹部',   isAdmin:false, color:'#B8860B', pw:'4127' },
+];
+
+// ===== GAS API =====
+async function gasCall(action, data={}) {
+  const res = await fetch(GAS_URL, {
+    method:'POST',
+    body: JSON.stringify({ action, data }),
+    headers:{ 'Content-Type':'text/plain' },
+  });
+  const json = await res.json();
+  if (!json.ok) throw new Error(json.error || 'GAS error');
+  return json.result;
+}
+
+// ===== ローディング =====
+function showLoading(msg='処理中...') {
+  let ov = document.getElementById('loadingOverlay');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = 'loadingOverlay';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(250,248,243,0.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+    ov.innerHTML = '<div style="width:34px;height:34px;border:3px solid #E8E5DF;border-top-color:#C8502A;border-radius:50%;animation:spin .7s linear infinite;"></div><div id="loadingMsg" style="font-size:13px;color:#6B6B6B;"></div>';
+    document.body.appendChild(ov);
+  }
+  document.getElementById('loadingMsg').textContent = msg;
+  ov.style.display = 'flex';
+}
+function hideLoading() {
+  const ov = document.getElementById('loadingOverlay');
+  if (ov) ov.style.display = 'none';
+}
+
+// ===== データ操作（GAS経由） =====
+async function getProducts() {
+  return await gasCall('getProducts');
+}
+async function saveProductAPI(d) {
+  return await gasCall('saveProduct', d);
+}
+async function deleteProductAPI(id) {
+  return await gasCall('deleteProduct', { id });
+}
+async function getEvalsAPI(productId) {
+  return await gasCall('getEvals', { productId });
+}
+async function saveEvalAPI(d) {
+  return await gasCall('saveEval', d);
+}
+
+// キャッシュ
+let _products = null;
+let _evals = {};
+async function fetchProducts(force=false) {
+  if (_products && !force) return _products;
+  _products = await getProducts();
+  return _products;
+}
+async function fetchEvals(productId, force=false) {
+  if (_evals[productId] && !force) return _evals[productId];
+  _evals[productId] = await getEvalsAPI(productId);
+  return _evals[productId];
+}
+
+let currentUser = null;
+let currentProduct = null;
+let starValues = {};
+
+function showToast(msg, d=2500, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.classList.add('show');
+  setTimeout(() => { t.classList.remove('show'); }, d);
+}
+
+// ===== LOGIN =====
+function buildLoginSelect() {
+  const sel = document.getElementById('loginSelect');
+  USERS.forEach(u => {
+    const o = document.createElement('option');
+    o.value = u.id;
+    o.textContent = u.name + (u.isAdmin ? ' (管理者)' : '');
+    sel.appendChild(o);
+  });
+}
+
+async function doLogin() {
+  const uid = document.getElementById('loginSelect').value;
+  const pw  = document.getElementById('loginPw').value;
+  const err = document.getElementById('loginError');
+  err.style.display = 'none';
+  if (!uid) { err.textContent = 'アカウントを選択してください'; err.style.display = 'block'; return; }
+  const user = USERS.find(u => u.id === uid);
+  if (!user || user.pw !== pw) {
+    err.textContent = 'パスワードが正しくありません';
+    err.style.display = 'block';
+    document.getElementById('loginPw').value = '';
+    return;
+  }
+  currentUser = user;
+  showLoading('接続中...');
+  try {
+    await fetchProducts(true);
+  } catch(e) {
+    hideLoading();
+    err.textContent = 'サーバーに接続できません。GAS URLを確認してください。';
+    err.style.display = 'block';
+    currentUser = null;
+    return;
+  }
+  hideLoading();
+  document.getElementById('loginScreen').classList.remove('active');
+  document.getElementById('mainScreen').classList.add('active');
+  document.getElementById('headerUser').textContent = user.name;
+  document.getElementById('loginPw').value = '';
+  if (user.isAdmin) {
+    document.getElementById('adminView').style.display = 'block';
+    await loadAdminView();
+  } else {
+    document.getElementById('staffView').style.display = 'block';
+    document.getElementById('staffGreeting').textContent = `こんにちは、${user.name.split(' ')[0]}さん`;
+    await loadStaffView();
+  }
+  buildStarInputs();
+}
+
+function logout() {
+  currentUser = null; currentProduct = null;
+  document.getElementById('loginScreen').classList.add('active');
+  document.getElementById('mainScreen').classList.remove('active');
+  document.getElementById('adminView').style.display = 'none';
+  document.getElementById('staffView').style.display = 'none';
+  document.getElementById('loginSelect').value = '';
+  document.getElementById('loginError').style.display = 'none';
+  document.getElementById('staffProductList').style.display = 'block';
+  document.getElementById('evalFormWrapper').style.display = 'none';
+}
+
+// ===== ADMIN =====
+async function loadAdminView() {
+  showLoading('読み込み中...');
+  const products = await fetchProducts(true);
+  hideLoading();
+  const grid = document.getElementById('adminProductGrid');
+  grid.innerHTML = '';
+  if (!products.length) {
+    grid.innerHTML = '<div class="empty-state">まだ商品が登録されていません</div>';
+  } else {
+    const g = document.createElement('div');
+    g.className = 'product-grid';
+    products.forEach(p => {
+      const c = document.createElement('div');
+      c.className = 'product-card static';
+      c.innerHTML = `
+        <div class="date-badge">📅 ${fmtDate(p.date)}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-meta">
+          <div class="meta-item"><div class="label">販売価格</div><div class="value">${p.price?'€'+p.price:'—'}</div></div>
+          <div class="meta-item"><div class="label">原価率</div><div class="value">${p.costRate?p.costRate+'%':'—'}</div></div>
+        </div>
+        <div style="margin-top:11px;padding-top:10px;border-top:1px solid var(--light-grey);display:flex;gap:7px;">
+          <button class="btn btn-outline btn-sm" style="flex:1;" onclick="jumpToResults('${p.id}')">📊 結果を見る</button>
+          <button class="btn btn-outline btn-sm" onclick="openEditProduct('${p.id}')">✏️</button>
+          <button class="btn btn-danger btn-sm" onclick="deleteProduct('${p.id}')">🗑</button>
+        </div>`;
+      g.appendChild(c);
+    });
+    grid.appendChild(g);
+  }
+  const dd = document.getElementById('resultProductDropdown');
+  const prev = dd.value;
+  dd.innerHTML = '<option value="">— 商品を選んでください —</option>';
+  products.forEach(p => {
+    const o = document.createElement('option');
+    o.value = p.id; o.textContent = `${p.name} (${fmtDate(p.date)})`;
+    dd.appendChild(o);
+  });
+  if (prev) dd.value = prev;
+  buildPwTable();
+}
+
+function buildPwTable() {
+  const t = document.getElementById('pwTable');
+  t.innerHTML = '<thead><tr><th>名前</th><th>役職</th><th>パスワード</th></tr></thead>';
+  const tb = document.createElement('tbody');
+  USERS.forEach(u => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td style="${u.isAdmin?'font-weight:700;':''}">${u.name}</td><td>${u.role}</td><td><span class="pw-mono">${u.pw}</span></td>`;
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+}
+
+async function jumpToResults(productId) {
+  showTab('tabResults');
+  document.getElementById('resultProductDropdown').value = productId;
+  await loadResultsForProduct(productId);
+}
+
+async function loadResultsForProduct(productId) {
+  const container = document.getElementById('resultsContent');
+  if (!productId) { container.innerHTML = ''; return; }
+  showLoading('結果を読み込み中...');
+  const products = await fetchProducts();
+  const product = products.find(p => p.id === productId);
+  if (!product) { hideLoading(); return; }
+  const evalsMap = await fetchEvals(productId, true);
+  hideLoading();
+  const staff = USERS.filter(u => !u.isAdmin);
+
+  container.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:8px;">
+      <div>
+        <div style="font-size:16px;font-weight:700;">${product.name}</div>
+        <div style="font-size:11px;color:var(--mid-grey);margin-top:2px;">
+          試食日: ${fmtDate(product.date)}${product.price?' / €'+product.price:''}${product.costRate?' / 原価率: '+product.costRate+'%':''}
+        </div>
+      </div>
+      <div style="font-size:12px;color:var(--mid-grey);">回答 <b>${Object.keys(evalsMap).length}</b> / ${staff.length}名</div>
+    </div>`;
+
+  if (!Object.keys(evalsMap).length) {
+    container.innerHTML += '<div style="text-align:center;padding:36px;color:var(--mid-grey);">まだ評価がありません</div>';
+    return;
+  }
+
+  const keys = ['look','aroma','taste','impact','repeat','overall'];
+  const kl = { look:'見た目', aroma:'香り', taste:'味', impact:'インパクト', repeat:'リピート', overall:'総合' };
+  const avgs = {};
+  keys.forEach(k => {
+    const vals = Object.values(evalsMap).map(e => e.stars?.[k]).filter(v=>v>0);
+    avgs[k] = vals.length ? (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(1) : '-';
+  });
+  let avgHtml = `<div class="eval-card" style="margin-bottom:16px;"><div class="eval-card-title">平均スコア（${Object.keys(evalsMap).length}名）</div><div class="score-grid">`;
+  keys.forEach(k => { avgHtml += `<div class="score-box"><div class="s-label">${kl[k]}</div><div class="s-val">${avgs[k]}</div></div>`; });
+  avgHtml += '</div></div>';
+  container.innerHTML += avgHtml;
+
+  USERS.filter(u=>!u.isAdmin).forEach(user => {
+    const ev = evalsMap[user.id];
+    if (!ev) return;
+    const sh = keys.map(k=>`<div class="score-box"><div class="s-label">${kl[k]}</div><div class="s-val" style="font-size:13px;">${ev.stars?.[k]||'—'}</div></div>`).join('');
+    const ti = (label) => `<div class="text-result-item"><div class="q">${label}</div>`;
+    const tv = (val)   => `<div class="a">${val||'—'}</div></div>`;
+    container.innerHTML += `
+      <div class="result-item">
+        <div class="result-header">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:28px;height:28px;border-radius:50%;background:${user.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${initials(user.name)}</div>
+            <div style="font-weight:700;font-size:13px;color:var(--text);">${user.name}</div>
+          </div>
+          <div style="font-size:10px;color:var(--text-sub);">${ev.submittedAt?new Date(ev.submittedAt).toLocaleString('ja-JP'):''}</div>
+        </div>
+        <div class="score-grid">${sh}</div>
+        <div>
+          ${ti('価格の妥当性')}${tv(ev.priceValidity==='ok'?'○ 妥当':ev.priceValidity==='revise'?'修正あり':'')}
+          ${ti('適正価格')}${tv(ev.priceValidity==='revise'&&ev.priceIdeal?'€'+ev.priceIdeal:'')}
+          ${ti('導入意向')}${tv(ev.stores?.length ? ev.stores.join('、') : '')}
+          ${ti('良かった点')}${tv(ev.good)}
+          ${ti('改善点')}${tv(ev.improve)}
+          ${ti('マーケティング意見')}${tv(ev.marketing)}
+          ${ti('オペレーション意見')}${tv(ev.operation)}
+          ${ti('自由コメント')}${tv(ev.free)}
+        </div>
+      </div>`;
+  });
+}
+
+function deleteProduct(id) {
+  if (!confirm('この商品を削除しますか？')) return;
+  DB.products = DB.products.filter(p => p.id !== id);
+  delete DB.evals[id];
+  loadAdminView();
+  showToast('削除しました');
+}
+
+function openAddProduct() {
+  document.getElementById('productModalTitle').textContent = '商品を追加';
+  document.getElementById('editProductId').value = '';
+  ['newDate','newName','newPrice','newCostRate'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('productModal').classList.add('open');
+}
+
+async function openEditProduct(id) {
+  const products = await fetchProducts();
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('productModalTitle').textContent = '商品を編集';
+  document.getElementById('editProductId').value = id;
+  document.getElementById('newDate').value     = p.date     || '';
+  document.getElementById('newName').value     = p.name     || '';
+  document.getElementById('newPrice').value    = p.price    || '';
+  document.getElementById('newCostRate').value = p.costRate || '';
+  document.getElementById('productModal').classList.add('open');
+}
+
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+
+async function deleteProduct(id) {
+  const products = await fetchProducts();
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  document.getElementById('deleteProductName').textContent = p.name;
+  document.getElementById('deleteProductId').value = id;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+async function confirmDelete() {
+  const id = document.getElementById('deleteProductId').value;
+  showLoading('削除中...');
+  await deleteProductAPI(id);
+  _products = null;
+  closeModal('deleteModal');
+  await loadAdminView();
+  hideLoading();
+  showToast('削除しました', 2000, '');
+}
+
+async function saveProduct() {
+  const date     = document.getElementById('newDate').value;
+  const name     = document.getElementById('newName').value.trim();
+  const price    = document.getElementById('newPrice').value;
+  const costRate = document.getElementById('newCostRate').value;
+  const editId   = document.getElementById('editProductId').value;
+  if (!date || !name) { alert('試食会実施日と商品名は必須です'); return; }
+  showLoading('保存中...');
+  const id = editId || ('p_' + Date.now());
+  await saveProductAPI({ id, date, name, price, costRate, at: new Date().toISOString() });
+  _products = null;
+  closeModal('productModal');
+  await loadAdminView();
+  hideLoading();
+  showToast(editId ? '商品を更新しました' : '商品を追加しました');
+}
+
+// ===== STAFF =====
+async function loadStaffView() {
+  showLoading('読み込み中...');
+  const products = await fetchProducts();
+  hideLoading();
+  const grid = document.getElementById('staffProductGrid');
+  grid.innerHTML = '';
+  if (!products.length) {
+    grid.innerHTML = '<div class="empty-state">現在、評価する商品はありません</div>';
+    document.getElementById('myHistoryWrapper').style.display = 'none';
+    return;
+  }
+  const g = document.createElement('div');
+  g.className = 'product-grid';
+  const submitted = [];
+  for (const p of products) {
+    const evMap = await fetchEvals(p.id);
+    const ev = evMap[currentUser.id] || null;
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    if (ev) card.innerHTML += '<div class="submitted-badge">✔ 送信済み</div>';
+    card.innerHTML += `
+      <div class="date-badge">📅 ${fmtDate(p.date)}</div>
+      <div class="product-name">${p.name}</div>
+      <div class="product-meta">
+        <div class="meta-item"><div class="label">販売価格</div><div class="value">${p.price?'€'+p.price:'—'}</div></div>
+        <div class="meta-item"><div class="label">原価率</div><div class="value">${p.costRate?p.costRate+'%':'—'}</div></div>
+      </div>`;
+    card.onclick = () => openEvalForm(p);
+    g.appendChild(card);
+    if (ev) submitted.push({ p, ev });
+  }
+  grid.appendChild(g);
+  const hw = document.getElementById('myHistoryWrapper');
+  const hl = document.getElementById('myHistoryList');
+  if (submitted.length) {
+    hw.style.display = 'block';
+    hl.innerHTML = '';
+    submitted.forEach(({ p, ev }) => {
+      const item = document.createElement('div');
+      item.className = 'history-item';
+      item.innerHTML = `
+        <div>
+          <div style="font-weight:700;font-size:13px;">${p.name}</div>
+          <div style="font-size:11px;color:var(--mid-grey);margin-top:2px;">送信: ${ev.submittedAt?new Date(ev.submittedAt).toLocaleString('ja-JP'):''} / 総合: ${ev.stars?.overall||'-'}点</div>
+        </div>
+        <div style="color:var(--mid-grey);font-size:18px;">›</div>`;
+      item.onclick = () => openEvalForm(p);
+      hl.appendChild(item);
+    });
+  } else { hw.style.display = 'none'; }
+}
+
+async function openEvalForm(product) {
+  currentProduct = product;
+  document.getElementById('staffProductList').style.display = 'none';
+  document.getElementById('evalFormWrapper').style.display = 'block';
+  document.getElementById('evalProductName').textContent = product.name;
+  const meta = [product.price?'販売価格: €'+product.price:'', product.costRate?'原価率: '+product.costRate+'%':''].filter(Boolean).join(' / ');
+  document.getElementById('evalProductMeta').textContent = meta;
+  document.getElementById('evalProductDate').textContent = `📅 ${fmtDate(product.date)}`;
+  showLoading('読み込み中...');
+  const evMap = await fetchEvals(product.id);
+  hideLoading();
+  const ev = evMap[currentUser.id] || null;
+  if (ev) {
+    document.getElementById('actualEvalForm').style.display = 'none';
+    document.getElementById('submittedView').style.display = 'block';
+    renderSubmittedDetail(ev);
+  } else {
+    document.getElementById('submittedView').style.display = 'none';
+    document.getElementById('actualEvalForm').style.display = 'block';
+    resetForm();
+  }
+  window.scrollTo(0, 0);
+}
+
+function renderSubmittedDetail(ev) {
+  const kl = { look:'見た目', aroma:'香り', taste:'味', impact:'インパクト', repeat:'リピート', overall:'総合評価', priceRating:'価格妥当性' };
+  const q = (label) => `<div style="font-size:10px;font-weight:700;color:var(--text-sub);text-transform:uppercase;margin-bottom:3px;">${label}</div>`;
+  const a = (val)   => `<div style="font-size:13px;white-space:pre-wrap;color:var(--text);">${val||'—'}</div>`;
+
+  let html = '<div style="background:var(--bg);border-radius:10px;padding:14px;">';
+
+  // スコアグリッド（全項目表示）
+  html += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:14px;">';
+  Object.entries(kl).forEach(([k,l]) => {
+    const v = ev.stars?.[k];
+    html += `<div class="score-box"><div class="s-label">${l}</div><div class="s-val" style="font-size:14px;">${v||'—'}</div></div>`;
+  });
+  html += '</div>';
+
+  // 価格
+  const pvLabel = ev.priceValidity==='ok' ? '○ 妥当' : ev.priceValidity==='revise' ? '修正あり' : '';
+  html += `<div style="margin-bottom:8px;">${q('価格の妥当性')}${a(pvLabel)}</div>`;
+  if (ev.priceValidity==='revise') html += `<div style="margin-bottom:8px;">${q('適正価格')}${a(ev.priceIdeal ? '€'+ev.priceIdeal : '')}</div>`;
+
+  // 導入意向
+  html += `<div style="margin-bottom:8px;">${q('導入意向')}${a(ev.stores?.length ? ev.stores.join('、') : '')}</div>`;
+
+  // テキスト項目（全表示）
+  [['good','良かった点'],['improve','改善点'],['marketing','マーケティング意見'],['operation','オペレーション意見'],['free','自由コメント']].forEach(([k,l]) => {
+    html += `<div style="margin-bottom:8px;">${q(l)}${a(ev[k])}</div>`;
+  });
+
+  html += '</div>';
+  document.getElementById('submittedDetail').innerHTML = html;
+}
+
+function backToList() {
+  currentProduct = null;
+  document.getElementById('evalFormWrapper').style.display = 'none';
+  document.getElementById('staffProductList').style.display = 'block';
+  loadStaffView();
+}
+
+
+function buildStarInputs() {
+  starValues = {};
+  document.querySelectorAll('.stars[data-key]').forEach(container => {
+    const key = container.dataset.key;
+    starValues[key] = 0;
+    container.innerHTML = '';
+    for (let i = 1; i <= 5; i++) {
+      const s = document.createElement('div');
+      s.className = 'star';
+      s.textContent = i;
+      s.onclick = e => {
+        e.stopPropagation();
+        starValues[key] = i;
+        container.querySelectorAll('.star').forEach(st => st.classList.toggle('active', parseInt(st.textContent) <= i));
+        container.style.outline = '';
+        container.style.padding = '';
+      };
+      container.appendChild(s);
+    }
+  });
+}
+
+function resetForm() {
+  buildStarInputs();
+  ['txtGood','txtImprove','txtMarketing','txtOperation','txtFree'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('priceInput').value = '';
+  selectPriceValidity(null);
+  document.querySelectorAll('.store-check').forEach(el => { el.classList.remove('checked'); el.querySelector('.check-icon').textContent = ''; });
+}
+
+
+function selectPriceValidity(val) {
+  const okBtn  = document.getElementById('priceOkBtn');
+  const revBtn = document.getElementById('priceRevBtn');
+  const revInput = document.getElementById('priceReviseInput');
+  if (!okBtn) return;
+  okBtn.classList.remove('selected-ok','selected-revise');
+  revBtn.classList.remove('selected-ok','selected-revise');
+  okBtn.dataset.selected  = '';
+  revBtn.dataset.selected = '';
+  if (val === 'ok') {
+    okBtn.classList.add('selected-ok');
+    okBtn.dataset.selected = 'ok';
+    revInput.style.display = 'none';
+    document.getElementById('priceInput').value = '';
+  } else if (val === 'revise') {
+    revBtn.classList.add('selected-revise');
+    okBtn.dataset.selected = 'revise';
+    revInput.style.display = 'flex';
+  }
+  // ハイライト解除
+  const pvSection = document.getElementById('priceValiditySection');
+  if (pvSection && val) { pvSection.style.outline=''; pvSection.style.padding=''; }
+}
+function toggleStore(el) {
+  el.classList.toggle('checked');
+  el.querySelector('.check-icon').textContent = el.classList.contains('checked') ? '✓' : '';
+  // チェックが入ったらハイライト解除
+  const checked = document.querySelectorAll('.store-check.checked').length;
+  const sg = document.getElementById('storeGrid');
+  if (checked > 0 && sg) { sg.style.outline=''; sg.style.padding=''; }
+}
+
+function submitEval() {
+  const req = ['look','aroma','taste','impact','repeat','overall'];
+  const kl = { look:'見た目', aroma:'香り', taste:'味', impact:'インパクト', repeat:'リピート', overall:'総合評価' };
+  const missing = req.filter(k => !starValues[k]);
+  const stores = [...document.querySelectorAll('.store-check.checked')].map(el => el.querySelector('.store-name').textContent);
+  const storesMissing = stores.length === 0;
+  const priceValidity = document.getElementById('priceOkBtn').dataset.selected || '';
+  const priceValidityMissing = !priceValidity;
+
+  // ハイライトリセット
+  document.querySelectorAll('.stars[data-key]').forEach(container => {
+    const key = container.dataset.key;
+    if (missing.includes(key)) {
+      container.style.outline = '2.5px solid #C8502A';
+      container.style.borderRadius = '8px';
+      container.style.padding = '3px';
+    } else {
+      container.style.outline = '';
+      container.style.padding = '';
+    }
+  });
+  const storeGrid = document.getElementById('storeGrid');
+  if (storesMissing) {
+    storeGrid.style.outline = '2.5px solid #C8502A';
+    storeGrid.style.borderRadius = '10px';
+    storeGrid.style.padding = '4px';
+  } else {
+    storeGrid.style.outline = '';
+    storeGrid.style.padding = '';
+  }
+  const pvSection = document.getElementById('priceValiditySection');
+  if (priceValidityMissing) {
+    pvSection.style.outline = '2.5px solid #C8502A';
+    pvSection.style.borderRadius = '10px';
+    pvSection.style.padding = '4px';
+  } else {
+    pvSection.style.outline = '';
+    pvSection.style.padding = '';
+  }
+
+  if (missing.length || storesMissing || priceValidityMissing) {
+    const msgs = [];
+    if (missing.length) msgs.push(missing.map(k=>kl[k]).join('・'));
+    if (priceValidityMissing) msgs.push('価格の妥当性');
+    if (storesMissing) msgs.push('導入意向店舗');
+    // 最初の未入力へスクロール
+    const firstEl = missing.length
+      ? document.querySelector(`.stars[data-key="${missing[0]}"]`)
+      : storeGrid;
+    if (firstEl) firstEl.scrollIntoView({ behavior:'smooth', block:'center' });
+    showToast('⚠️ 未入力: ' + msgs.join(' / '), 4000, 'error');
+    return;
+  }
+  const data = {
+    id: 'ev_'+Date.now(),
+    stars: { ...starValues },
+    good:      document.getElementById('txtGood').value,
+    improve:   document.getElementById('txtImprove').value,
+    marketing: document.getElementById('txtMarketing').value,
+    operation: document.getElementById('txtOperation').value,
+    free:      document.getElementById('txtFree').value,
+    priceValidity: priceValidity,
+    priceIdeal:document.getElementById('priceInput').value,
+    stores,
+    submittedAt: new Date().toISOString(),
+  };
+  showLoading('送信中...');
+  try {
+    await saveEvalAPI(data);
+    delete _evals[currentProduct.id];
+    hideLoading();
+    document.getElementById('actualEvalForm').style.display = 'none';
+    document.getElementById('submittedView').style.display = 'block';
+    renderSubmittedDetail(data);
+    showToast('評価を送信しました ✅', 2500, '');
+  } catch(e) {
+    hideLoading();
+    if (e.message === 'Already submitted') {
+      alert('この商品の評価はすでに送信済みです。');
+    } else {
+      alert('送信に失敗しました。もう一度お試しください。');
+    }
+  }
+}
+
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  const btn = document.getElementById('tabBtn'+id.replace('tab',''));
+  if (btn) btn.classList.add('active');
+}
+
+function fmtDate(d) {
+  if (!d) return '';
+  const dt = new Date(d+'T00:00:00');
+  return `${dt.getFullYear()}年${dt.getMonth()+1}月${dt.getDate()}日`;
+}
+function initials(n) { return n.split(' ').map(p=>p[0]).join('').toUpperCase().slice(0,2); }
+
+buildLoginSelect();
+</script>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
+    <div class="modal-title" style="text-align:center;">本当に削除しますか？</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:6px;">以下の商品を削除します：</div>
+    <div id="deleteProductName" style="font-size:15px;font-weight:700;color:var(--text);background:var(--bg);padding:10px 16px;border-radius:8px;margin-bottom:4px;"></div>
+    <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">※ 削除すると元に戻せません</div>
+    <input type="hidden" id="deleteProductId">
+    <div class="modal-actions" style="justify-content:center;gap:12px;margin-top:22px;">
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">キャンセル</button>
+      <button class="btn btn-danger" style="font-size:13px;padding:9px 20px;" onclick="confirmDelete()">削除する</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>
