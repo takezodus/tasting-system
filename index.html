@@ -334,6 +334,22 @@
   </div>
 </div>
 
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
+    <div class="modal-title" style="text-align:center;">本当に削除しますか？</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:6px;">以下の商品を削除します：</div>
+    <div id="deleteProductName" style="font-size:15px;font-weight:700;color:var(--text);background:var(--bg);padding:10px 16px;border-radius:8px;margin-bottom:4px;"></div>
+    <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">※ 削除すると元に戻せません</div>
+    <input type="hidden" id="deleteProductId">
+    <div class="modal-actions" style="justify-content:center;gap:12px;margin-top:22px;">
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">キャンセル</button>
+      <button class="btn btn-danger" style="font-size:13px;padding:9px 20px;" onclick="confirmDelete()">削除する</button>
+    </div>
+  </div>
+</div>
+
 <!-- ADD/EDIT PRODUCT MODAL -->
 <div class="modal-overlay" id="productModal">
   <div class="modal">
@@ -384,10 +400,13 @@ const USERS = [
 
 // ===== GAS API =====
 async function gasCall(action, data={}) {
-  const res = await fetch(GAS_URL, {
-    method:'POST',
-    body: JSON.stringify({ action, data }),
-    headers:{ 'Content-Type':'text/plain' },
+  const params = new URLSearchParams({
+    action: action,
+    data: JSON.stringify(data)
+  });
+  const res = await fetch(GAS_URL + '?' + params.toString(), {
+    method: 'GET',
+    redirect: 'follow',
   });
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'GAS error');
@@ -824,11 +843,11 @@ function renderSubmittedDetail(ev) {
   document.getElementById('submittedDetail').innerHTML = html;
 }
 
-function backToList() {
+async function backToList() {
   currentProduct = null;
   document.getElementById('evalFormWrapper').style.display = 'none';
   document.getElementById('staffProductList').style.display = 'block';
-  loadStaffView();
+  await loadStaffView();
 }
 
 
@@ -895,7 +914,7 @@ function toggleStore(el) {
   if (checked > 0 && sg) { sg.style.outline=''; sg.style.padding=''; }
 }
 
-function submitEval() {
+async function submitEval() {
   const req = ['look','aroma','taste','impact','repeat','overall'];
   const kl = { look:'見た目', aroma:'香り', taste:'味', impact:'インパクト', repeat:'リピート', overall:'総合評価' };
   const missing = req.filter(k => !starValues[k]);
@@ -997,21 +1016,5 @@ function initials(n) { return n.split(' ').map(p=>p[0]).join('').toUpperCase().s
 
 buildLoginSelect();
 </script>
-
-<!-- DELETE CONFIRM MODAL -->
-<div class="modal-overlay" id="deleteModal">
-  <div class="modal" style="max-width:360px;text-align:center;">
-    <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
-    <div class="modal-title" style="text-align:center;">本当に削除しますか？</div>
-    <div style="font-size:14px;color:var(--text-sub);margin-bottom:6px;">以下の商品を削除します：</div>
-    <div id="deleteProductName" style="font-size:15px;font-weight:700;color:var(--text);background:var(--bg);padding:10px 16px;border-radius:8px;margin-bottom:4px;"></div>
-    <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">※ 削除すると元に戻せません</div>
-    <input type="hidden" id="deleteProductId">
-    <div class="modal-actions" style="justify-content:center;gap:12px;margin-top:22px;">
-      <button class="btn btn-outline" onclick="closeModal('deleteModal')">キャンセル</button>
-      <button class="btn btn-danger" style="font-size:13px;padding:9px 20px;" onclick="confirmDelete()">削除する</button>
-    </div>
-  </div>
-</div>
 </body>
 </html>
