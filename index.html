@@ -126,7 +126,6 @@
   .pw-table td{padding:10px 12px;border-bottom:1px solid var(--border-c);color:var(--text);}
   .pw-table tr:last-child td{border-bottom:none;}
   .pw-mono{font-family:'Courier New',monospace;background:var(--bg);padding:2px 7px;border-radius:4px;letter-spacing:.1em;font-size:14px;font-weight:700;color:var(--text);}
-
   .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(0);background:#1C1C1C;color:#fff;padding:11px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:400;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.35);}
   .toast.show{opacity:1;}
   .toast.error{background:#C8502A;color:#fff;font-size:14px;padding:13px 22px;}
@@ -334,22 +333,6 @@
   </div>
 </div>
 
-<!-- DELETE CONFIRM MODAL -->
-<div class="modal-overlay" id="deleteModal">
-  <div class="modal" style="max-width:360px;text-align:center;">
-    <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
-    <div class="modal-title" style="text-align:center;">本当に削除しますか？</div>
-    <div style="font-size:14px;color:var(--text-sub);margin-bottom:6px;">以下の商品を削除します：</div>
-    <div id="deleteProductName" style="font-size:15px;font-weight:700;color:var(--text);background:var(--bg);padding:10px 16px;border-radius:8px;margin-bottom:4px;"></div>
-    <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">※ 削除すると元に戻せません</div>
-    <input type="hidden" id="deleteProductId">
-    <div class="modal-actions" style="justify-content:center;gap:12px;margin-top:22px;">
-      <button class="btn btn-outline" onclick="closeModal('deleteModal')">キャンセル</button>
-      <button class="btn btn-danger" style="font-size:13px;padding:9px 20px;" onclick="confirmDelete()">削除する</button>
-    </div>
-  </div>
-</div>
-
 <!-- ADD/EDIT PRODUCT MODAL -->
 <div class="modal-overlay" id="productModal">
   <div class="modal">
@@ -400,14 +383,8 @@ const USERS = [
 
 // ===== GAS API =====
 async function gasCall(action, data={}) {
-  const params = new URLSearchParams({
-    action: action,
-    data: JSON.stringify(data)
-  });
-  const res = await fetch(GAS_URL + '?' + params.toString(), {
-    method: 'GET',
-    redirect: 'follow',
-  });
+  const params = new URLSearchParams({ action, data: JSON.stringify(data) });
+  const res = await fetch(GAS_URL + '?' + params.toString(), { method:'GET', redirect:'follow' });
   const json = await res.json();
   if (!json.ok) throw new Error(json.error || 'GAS error');
   return json.result;
@@ -419,8 +396,8 @@ function showLoading(msg='処理中...') {
   if (!ov) {
     ov = document.createElement('div');
     ov.id = 'loadingOverlay';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(250,248,243,0.88);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
-    ov.innerHTML = '<div style="width:34px;height:34px;border:3px solid #E8E5DF;border-top-color:#C8502A;border-radius:50%;animation:spin .7s linear infinite;"></div><div id="loadingMsg" style="font-size:13px;color:#6B6B6B;"></div>';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.4);z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;';
+    ov.innerHTML = '<div style="width:38px;height:38px;border:3px solid rgba(255,255,255,0.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;"></div><div id="loadingMsg" style="font-size:13px;color:#fff;font-weight:600;"></div>';
     document.body.appendChild(ov);
   }
   document.getElementById('loadingMsg').textContent = msg;
@@ -431,33 +408,16 @@ function hideLoading() {
   if (ov) ov.style.display = 'none';
 }
 
-// ===== データ操作（GAS経由） =====
-async function getProducts() {
+// ===== GASデータ操作 =====
+async function fetchProducts() {
   return await gasCall('getProducts');
 }
-async function saveProductAPI(d) {
-  return await gasCall('saveProduct', d);
-}
-async function deleteProductAPI(id) {
-  return await gasCall('deleteProduct', { id });
-}
-async function getEvalsAPI(productId) {
+async function fetchEvals(productId) {
   return await gasCall('getEvals', { productId });
 }
-async function saveEvalAPI(d) {
-  return await gasCall('saveEval', d);
-}
-
-// キャッシュなし（常に最新を取得）
-let _products = null;
-let _evals = {};
-async function fetchProducts(force=false) {
-  _products = await getProducts();
-  return _products;
-}
-async function fetchEvals(productId, force=false) {
-  _evals[productId] = await getEvalsAPI(productId);
-  return _evals[productId];
+async function fetchMyEval(productId) {
+  const map = await fetchEvals(productId);
+  return map[currentUser.id] || null;
 }
 
 let currentUser = null;
@@ -499,10 +459,10 @@ async function doLogin() {
   currentUser = user;
   showLoading('接続中...');
   try {
-    await fetchProducts(true);
+    await fetchProducts();
   } catch(e) {
     hideLoading();
-    err.textContent = 'サーバーに接続できません。GAS URLを確認してください。';
+    err.textContent = 'サーバーに接続できません。しばらく待ってから再試行してください。';
     err.style.display = 'block';
     currentUser = null;
     return;
@@ -538,7 +498,7 @@ function logout() {
 // ===== ADMIN =====
 async function loadAdminView() {
   showLoading('読み込み中...');
-  const products = await fetchProducts(true);
+  const products = await fetchProducts();
   hideLoading();
   const grid = document.getElementById('adminProductGrid');
   grid.innerHTML = '';
@@ -603,7 +563,7 @@ async function loadResultsForProduct(productId) {
   const products = await fetchProducts();
   const product = products.find(p => p.id === productId);
   if (!product) { hideLoading(); return; }
-  const evalsMap = await fetchEvals(productId, true);
+  const evalsMap = await fetchEvals(productId);
   hideLoading();
   const staff = USERS.filter(u => !u.isAdmin);
 
@@ -681,7 +641,9 @@ function openAddProduct() {
 }
 
 async function openEditProduct(id) {
+  showLoading('読み込み中...');
   const products = await fetchProducts();
+  hideLoading();
   const p = products.find(x => x.id === id);
   if (!p) return;
   document.getElementById('productModalTitle').textContent = '商品を編集';
@@ -696,7 +658,9 @@ async function openEditProduct(id) {
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
 
 async function deleteProduct(id) {
+  showLoading('読み込み中...');
   const products = await fetchProducts();
+  hideLoading();
   const p = products.find(x => x.id === id);
   if (!p) return;
   document.getElementById('deleteProductName').textContent = p.name;
@@ -707,8 +671,7 @@ async function deleteProduct(id) {
 async function confirmDelete() {
   const id = document.getElementById('deleteProductId').value;
   showLoading('削除中...');
-  await deleteProductAPI(id);
-  _products = null;
+  await gasCall('deleteProduct', { id });
   closeModal('deleteModal');
   await loadAdminView();
   hideLoading();
@@ -724,8 +687,7 @@ async function saveProduct() {
   if (!date || !name) { alert('試食会実施日と商品名は必須です'); return; }
   showLoading('保存中...');
   const id = editId || ('p_' + Date.now());
-  await saveProductAPI({ id, date, name, price, costRate, at: new Date().toISOString() });
-  _products = null;
+  await gasCall('saveProduct', { id, date, name, price, costRate, at: new Date().toISOString() });
   closeModal('productModal');
   await loadAdminView();
   hideLoading();
@@ -848,7 +810,6 @@ async function backToList() {
   await loadStaffView();
 }
 
-
 function buildStarInputs() {
   starValues = {};
   document.querySelectorAll('.stars[data-key]').forEach(container => {
@@ -966,22 +927,30 @@ async function submitEval() {
     return;
   }
   const data = {
-    id: 'ev_'+Date.now(),
-    stars: { ...starValues },
-    good:      document.getElementById('txtGood').value,
-    improve:   document.getElementById('txtImprove').value,
-    marketing: document.getElementById('txtMarketing').value,
-    operation: document.getElementById('txtOperation').value,
-    free:      document.getElementById('txtFree').value,
+    id:          'ev_' + Date.now(),
+    productId:   currentProduct.id,
+    productName: currentProduct.name,
+    userId:      currentUser.id,
+    userName:    currentUser.name,
+    stars:       { ...starValues },
     priceValidity: priceValidity,
-    priceIdeal:document.getElementById('priceInput').value,
+    good:        document.getElementById('txtGood').value,
+    improve:     document.getElementById('txtImprove').value,
+    marketing:   document.getElementById('txtMarketing').value,
+    operation:   document.getElementById('txtOperation').value,
+    free:        document.getElementById('txtFree').value,
+    priceIdeal:  document.getElementById('priceInput').value,
     stores,
     submittedAt: new Date().toISOString(),
   };
   showLoading('送信中...');
   try {
-    await saveEvalAPI(data);
-    delete _evals[currentProduct.id];
+    const result = await gasCall('saveEval', data);
+    if (result && result.error === 'Already submitted') {
+      hideLoading();
+      alert('この商品の評価はすでに送信済みです。');
+      return;
+    }
     hideLoading();
     document.getElementById('actualEvalForm').style.display = 'none';
     document.getElementById('submittedView').style.display = 'block';
@@ -989,11 +958,7 @@ async function submitEval() {
     showToast('評価を送信しました ✅', 2500, '');
   } catch(e) {
     hideLoading();
-    if (e.message === 'Already submitted') {
-      alert('この商品の評価はすでに送信済みです。');
-    } else {
-      alert('送信に失敗しました。もう一度お試しください。');
-    }
+    alert('送信に失敗しました。もう一度お試しください。\n' + e.message);
   }
 }
 
@@ -1014,5 +979,21 @@ function initials(n) { return n.split(' ').map(p=>p[0]).join('').toUpperCase().s
 
 buildLoginSelect();
 </script>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="modal-overlay" id="deleteModal">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <div style="font-size:32px;margin-bottom:12px;">🗑️</div>
+    <div class="modal-title" style="text-align:center;">本当に削除しますか？</div>
+    <div style="font-size:14px;color:var(--text-sub);margin-bottom:6px;">以下の商品を削除します：</div>
+    <div id="deleteProductName" style="font-size:15px;font-weight:700;color:var(--text);background:var(--bg);padding:10px 16px;border-radius:8px;margin-bottom:4px;"></div>
+    <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">※ 削除すると元に戻せません</div>
+    <input type="hidden" id="deleteProductId">
+    <div class="modal-actions" style="justify-content:center;gap:12px;margin-top:22px;">
+      <button class="btn btn-outline" onclick="closeModal('deleteModal')">キャンセル</button>
+      <button class="btn btn-danger" style="font-size:13px;padding:9px 20px;" onclick="confirmDelete()">削除する</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
