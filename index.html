@@ -448,16 +448,14 @@ async function saveEvalAPI(d) {
   return await gasCall('saveEval', d);
 }
 
-// キャッシュ
+// キャッシュなし（常に最新を取得）
 let _products = null;
 let _evals = {};
 async function fetchProducts(force=false) {
-  if (_products && !force) return _products;
   _products = await getProducts();
   return _products;
 }
 async function fetchEvals(productId, force=false) {
-  if (_evals[productId] && !force) return _evals[productId];
   _evals[productId] = await getEvalsAPI(productId);
   return _evals[productId];
 }
