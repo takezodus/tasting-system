@@ -135,6 +135,16 @@
   .price-choice-btn.selected-ok{border-color:var(--success);background:rgba(58,125,68,.12);color:var(--success);}
   .price-choice-btn.selected-revise{border-color:var(--accent);background:var(--accent-light);color:var(--accent);}
   .choice-icon{font-size:15px;font-weight:700;}
+  .quick-item{background:var(--card);border:1.5px solid var(--border-c);border-radius:12px;padding:16px;margin-bottom:12px;}
+  .quick-item.quick-done{border-color:var(--success);background:rgba(58,125,68,0.06);}
+  .quick-item-name{font-size:15px;font-weight:700;margin-bottom:10px;color:var(--text);}
+  .quick-item-meta{font-size:11px;color:var(--text-sub);margin-bottom:10px;}
+  .quick-stars{display:flex;gap:6px;margin-bottom:10px;}
+  .quick-star{width:38px;height:38px;background:var(--bg);border:1.5px solid var(--border-c);border-radius:8px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;font-weight:700;color:var(--text-sub);transition:all .1s;user-select:none;-webkit-tap-highlight-color:transparent;}
+  .quick-star.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .quick-comment{width:100%;padding:9px 12px;border:1.5px solid var(--border-c);border-radius:8px;font-size:14px;font-family:inherit;background:var(--input-bg);color:var(--text);}
+  .quick-comment:focus{outline:none;border-color:var(--accent);}
+  .quick-done-badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;color:var(--success);font-weight:700;margin-bottom:8px;}
   @media(max-width:560px){
     .form-row{grid-template-columns:1fr;}
     .score-grid{grid-template-columns:repeat(3,1fr);}
@@ -331,7 +341,27 @@
       </div>
     </div>
   </div>
+
+  <!-- QUICK EVAL FORM（簡易評価モード） -->
+  <div id="quickEvalWrapper" style="display:none;">
+    <div class="nav-back" onclick="backToQuickList()">← 商品一覧に戻る</div>
+    <div class="product-info-bar">
+      <div>
+        <div class="pname" id="quickEvalTitle">サクサク評価</div>
+        <div class="pmeta" id="quickEvalMeta">-</div>
+      </div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border-c);border-radius:10px;padding:12px 14px;margin-bottom:16px;font-size:12px;color:var(--text-sub);">
+      💡 各品に総合評価（必須）と一言コメント（任意）を入力して、最後に「まとめて送信」してください。
+    </div>
+    <div id="quickEvalList"></div>
+    <div style="position:sticky;bottom:0;background:var(--bg);padding:14px 0 0;margin-top:8px;">
+      <div id="quickProgress" style="font-size:12px;color:var(--text-sub);margin-bottom:8px;text-align:center;"></div>
+      <button class="btn btn-primary" style="width:100%;font-size:15px;padding:14px;" onclick="submitQuickEvals()">📤 まとめて送信する</button>
+    </div>
+  </div>
 </div>
+
 
 <!-- ADD/EDIT PRODUCT MODAL -->
 <div class="modal-overlay" id="productModal">
@@ -341,7 +371,7 @@
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">試食会実施日 <span style="color:var(--accent);">*</span></label>
-        <input type="date" class="form-input" id="newDate">
+        <input type="date" class="form-input" id="newDate" onchange="checkSameDateMode()">
       </div>
       <div class="form-group">
         <label class="form-label">商品名 <span style="color:var(--accent);">*</span></label>
@@ -357,6 +387,14 @@
         <label class="form-label">原価率 (%) <span style="color:var(--mid-grey);font-weight:400;font-size:10px;">任意</span></label>
         <input type="number" class="form-input" id="newCostRate" placeholder="例: 32" step="0.1" min="0" max="100">
       </div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">評価モード <span style="color:var(--accent);">*</span></label>
+      <div style="display:flex;gap:10px;">
+        <button type="button" class="price-choice-btn" id="modeDetailBtn" onclick="selectMode('detail')" style="flex:1;justify-content:center;">詳細評価</button>
+        <button type="button" class="price-choice-btn" id="modeQuickBtn" onclick="selectMode('quick')" style="flex:1;justify-content:center;">簡易評価</button>
+      </div>
+      <div id="modeHint" style="font-size:11px;color:var(--text-sub);margin-top:8px;"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('productModal')">キャンセル</button>
@@ -511,7 +549,10 @@ async function loadAdminView() {
       const c = document.createElement('div');
       c.className = 'product-card static';
       c.innerHTML = `
-        <div class="date-badge">📅 ${fmtDate(p.date)}</div>
+        <div style="display:flex;gap:6px;align-items:center;margin-bottom:9px;">
+          <div class="date-badge" style="margin-bottom:0;">📅 ${fmtDate(p.date)}</div>
+          <div style="font-size:10px;font-weight:600;background:${p.mode==='quick'?'var(--accent)':'var(--border-c)'};color:${p.mode==='quick'?'#fff':'var(--text)'};padding:2px 8px;border-radius:10px;">${p.mode==='quick'?'簡易':'詳細'}</div>
+        </div>
         <div class="product-name">${p.name}</div>
         <div class="product-meta">
           <div class="meta-item"><div class="label">販売価格</div><div class="value">${p.price?'€'+p.price:'—'}</div></div>
@@ -598,6 +639,26 @@ async function loadResultsForProduct(productId) {
   USERS.filter(u=>!u.isAdmin).forEach(user => {
     const ev = evalsMap[user.id];
     if (!ev) return;
+
+    if (ev.mode === 'quick') {
+      // 簡易モード：総合評価＋一言コメントのみのシンプル表示
+      container.innerHTML += `
+        <div class="result-item">
+          <div class="result-header">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <div style="width:28px;height:28px;border-radius:50%;background:${user.color};display:flex;align-items:center;justify-content:center;color:#fff;font-size:10px;font-weight:700;flex-shrink:0;">${initials(user.name)}</div>
+              <div style="font-weight:700;font-size:13px;color:var(--text);">${user.name}</div>
+            </div>
+            <div style="font-size:10px;color:var(--text-sub);">${ev.submittedAt?new Date(ev.submittedAt).toLocaleString('ja-JP'):''}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="score-box" style="min-width:70px;"><div class="s-label">総合評価</div><div class="s-val">${ev.stars?.overall||'—'}</div></div>
+            <div style="flex:1;font-size:13px;color:var(--text);background:var(--bg);padding:8px 12px;border-radius:6px;">${ev.good||'（コメントなし）'}</div>
+          </div>
+        </div>`;
+      return;
+    }
+
     const sh = keys.map(k=>`<div class="score-box"><div class="s-label">${kl[k]}</div><div class="s-val" style="font-size:13px;">${ev.stars?.[k]||'—'}</div></div>`).join('');
     const ti = (label) => `<div class="text-result-item"><div class="q">${label}</div>`;
     const tv = (val)   => `<div class="a">${val||'—'}</div></div>`;
@@ -633,10 +694,39 @@ function deleteProduct(id) {
   showToast('削除しました');
 }
 
+let selectedMode = 'detail';
+
+function selectMode(mode) {
+  selectedMode = mode;
+  const dBtn = document.getElementById('modeDetailBtn');
+  const qBtn = document.getElementById('modeQuickBtn');
+  dBtn.classList.remove('selected-ok');
+  qBtn.classList.remove('selected-ok');
+  if (mode === 'detail') dBtn.classList.add('selected-ok');
+  if (mode === 'quick')  qBtn.classList.add('selected-ok');
+}
+
+async function checkSameDateMode() {
+  const date = document.getElementById('newDate').value;
+  const hint = document.getElementById('modeHint');
+  if (!date) { hint.textContent = ''; return; }
+  const products = await fetchProducts();
+  const sameDate = products.filter(p => p.date === date);
+  if (sameDate.length > 0) {
+    const mode = sameDate[0].mode;
+    selectMode(mode);
+    hint.textContent = `※ この日付の試食会はすでに「${mode==='quick'?'簡易評価':'詳細評価'}」モードに設定されています（統一されます）`;
+  } else {
+    hint.textContent = '';
+  }
+}
+
 function openAddProduct() {
   document.getElementById('productModalTitle').textContent = '商品を追加';
   document.getElementById('editProductId').value = '';
   ['newDate','newName','newPrice','newCostRate'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('modeHint').textContent = '';
+  selectMode('detail');
   document.getElementById('productModal').classList.add('open');
 }
 
@@ -652,6 +742,8 @@ async function openEditProduct(id) {
   document.getElementById('newName').value     = p.name     || '';
   document.getElementById('newPrice').value    = p.price    || '';
   document.getElementById('newCostRate').value = p.costRate || '';
+  document.getElementById('modeHint').textContent = '';
+  selectMode(p.mode || 'detail');
   document.getElementById('productModal').classList.add('open');
 }
 
@@ -687,7 +779,7 @@ async function saveProduct() {
   if (!date || !name) { alert('試食会実施日と商品名は必須です'); return; }
   showLoading('保存中...');
   const id = editId || ('p_' + Date.now());
-  await gasCall('saveProduct', { id, date, name, price, costRate, at: new Date().toISOString() });
+  await gasCall('saveProduct', { id, date, name, price, costRate, mode: selectedMode, at: new Date().toISOString() });
   closeModal('productModal');
   await loadAdminView();
   hideLoading();
@@ -706,27 +798,71 @@ async function loadStaffView() {
     document.getElementById('myHistoryWrapper').style.display = 'none';
     return;
   }
-  const g = document.createElement('div');
-  g.className = 'product-grid';
+
+  // 日付ごとにグルーピング
+  const byDate = {};
+  products.forEach(p => {
+    if (!byDate[p.date]) byDate[p.date] = [];
+    byDate[p.date].push(p);
+  });
+  const dates = Object.keys(byDate).sort().reverse();
+
   const submitted = [];
-  for (const p of products) {
-    const evMap = await fetchEvals(p.id);
-    const ev = evMap[currentUser.id] || null;
-    const card = document.createElement('div');
-    card.className = 'product-card';
-    if (ev) card.innerHTML += '<div class="submitted-badge">✔ 送信済み</div>';
-    card.innerHTML += `
-      <div class="date-badge">📅 ${fmtDate(p.date)}</div>
-      <div class="product-name">${p.name}</div>
-      <div class="product-meta">
-        <div class="meta-item"><div class="label">販売価格</div><div class="value">${p.price?'€'+p.price:'—'}</div></div>
-        <div class="meta-item"><div class="label">原価率</div><div class="value">${p.costRate?p.costRate+'%':'—'}</div></div>
-      </div>`;
-    card.onclick = () => openEvalForm(p);
-    g.appendChild(card);
-    if (ev) submitted.push({ p, ev });
+
+  for (const date of dates) {
+    const group = byDate[date];
+    const mode = group[0].mode || 'detail';
+
+    const dateHeader = document.createElement('div');
+    dateHeader.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-sub);margin:18px 0 10px;display:flex;align-items:center;gap:8px;';
+    dateHeader.innerHTML = `📅 ${fmtDate(date)}　<span style="font-size:11px;font-weight:500;background:${mode==='quick'?'var(--accent)':'var(--border-c)'};color:${mode==='quick'?'#fff':'var(--text)'};padding:2px 9px;border-radius:10px;">${mode==='quick'?'簡易評価':'詳細評価'}</span>`;
+    grid.appendChild(dateHeader);
+
+    if (mode === 'quick') {
+      // 簡易モード：まとめて評価ボタン1つ
+      const doneInfo = await gasCall('getMyEvalsForDate', { date, userId: currentUser.id });
+      const doneCount = doneInfo.filter(x => x.done).length;
+      const allDone = doneCount === group.length;
+
+      const quickCard = document.createElement('div');
+      quickCard.className = 'product-card';
+      quickCard.style.cssText = 'margin-bottom:8px;';
+      quickCard.innerHTML = `
+        <div class="product-name">${group.length}品を一括評価</div>
+        <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">進捗: ${doneCount} / ${group.length}品 完了</div>
+        <div style="margin-top:12px;">
+          <button class="btn btn-primary" style="width:100%;" ${allDone?'disabled':''}>${allDone ? '✔ 全品評価済み' : 'サクサク評価する →'}</button>
+        </div>`;
+      if (!allDone) {
+        quickCard.querySelector('button').onclick = () => openQuickEvalForm(date, group);
+      } else {
+        quickCard.querySelector('button').style.cssText = 'width:100%;background:var(--success);opacity:0.7;cursor:default;';
+      }
+      grid.appendChild(quickCard);
+    } else {
+      // 詳細モード：今まで通り商品ごとにカード
+      const g = document.createElement('div');
+      g.className = 'product-grid';
+      for (const p of group) {
+        const evMap = await fetchEvals(p.id);
+        const ev = evMap[currentUser.id] || null;
+        const card = document.createElement('div');
+        card.className = 'product-card';
+        if (ev) card.innerHTML += '<div class="submitted-badge">✔ 送信済み</div>';
+        card.innerHTML += `
+          <div class="product-name">${p.name}</div>
+          <div class="product-meta">
+            <div class="meta-item"><div class="label">販売価格</div><div class="value">${p.price?'€'+p.price:'—'}</div></div>
+            <div class="meta-item"><div class="label">原価率</div><div class="value">${p.costRate?p.costRate+'%':'—'}</div></div>
+          </div>`;
+        card.onclick = () => openEvalForm(p);
+        g.appendChild(card);
+        if (ev) submitted.push({ p, ev });
+      }
+      grid.appendChild(g);
+    }
   }
-  grid.appendChild(g);
+
   const hw = document.getElementById('myHistoryWrapper');
   const hl = document.getElementById('myHistoryList');
   if (submitted.length) {
@@ -806,6 +942,116 @@ function renderSubmittedDetail(ev) {
 async function backToList() {
   currentProduct = null;
   document.getElementById('evalFormWrapper').style.display = 'none';
+  document.getElementById('staffProductList').style.display = 'block';
+  await loadStaffView();
+}
+
+// ===== QUICK EVAL（簡易評価モード） =====
+let quickItems = [];      // 現在の日付の商品リスト
+let quickValues = {};     // productId -> { overall, comment }
+let quickDoneSet = new Set(); // すでに送信済みのproductId
+
+async function openQuickEvalForm(date, products) {
+  document.getElementById('staffProductList').style.display = 'none';
+  document.getElementById('quickEvalWrapper').style.display = 'block';
+  document.getElementById('quickEvalTitle').textContent = fmtDate(date) + 'の試食会';
+  document.getElementById('quickEvalMeta').textContent = products.length + '品を評価';
+
+  quickItems = products;
+  quickValues = {};
+
+  showLoading('読み込み中...');
+  const doneInfo = await gasCall('getMyEvalsForDate', { date, userId: currentUser.id });
+  hideLoading();
+  quickDoneSet = new Set(doneInfo.filter(x => x.done).map(x => x.id));
+
+  renderQuickList();
+  window.scrollTo(0, 0);
+}
+
+function renderQuickList() {
+  const list = document.getElementById('quickEvalList');
+  list.innerHTML = '';
+  quickItems.forEach(p => {
+    const isDone = quickDoneSet.has(p.id);
+    const item = document.createElement('div');
+    item.className = 'quick-item' + (isDone ? ' quick-done' : '');
+    item.id = 'quick_' + p.id;
+
+    if (isDone) {
+      item.innerHTML =
+        '<div class="quick-done-badge">✔ 送信済み</div>' +
+        '<div class="quick-item-name">' + p.name + '</div>';
+    } else {
+      item.innerHTML =
+        '<div class="quick-item-name">' + p.name + '</div>' +
+        (p.price ? '<div class="quick-item-meta">€' + p.price + '</div>' : '') +
+        '<div class="quick-stars" id="qstars_' + p.id + '"></div>' +
+        '<input type="text" class="quick-comment" id="qcomment_' + p.id + '" placeholder="一言コメント（任意）">';
+    }
+    list.appendChild(item);
+
+    if (!isDone) {
+      const starsContainer = document.getElementById('qstars_' + p.id);
+      for (let i = 1; i <= 5; i++) {
+        const s = document.createElement('div');
+        s.className = 'quick-star';
+        s.textContent = i;
+        s.onclick = () => {
+          quickValues[p.id] = quickValues[p.id] || {};
+          quickValues[p.id].overall = i;
+          starsContainer.querySelectorAll('.quick-star').forEach(st => st.classList.toggle('active', parseInt(st.textContent) <= i));
+          updateQuickProgress();
+        };
+        starsContainer.appendChild(s);
+      }
+      document.getElementById('qcomment_' + p.id).addEventListener('input', (e) => {
+        quickValues[p.id] = quickValues[p.id] || {};
+        quickValues[p.id].comment = e.target.value;
+      });
+    }
+  });
+  updateQuickProgress();
+}
+
+function updateQuickProgress() {
+  const total = quickItems.filter(p => !quickDoneSet.has(p.id)).length;
+  const rated = Object.values(quickValues).filter(v => v.overall).length;
+  document.getElementById('quickProgress').textContent = '評価済み: ' + rated + ' / ' + total + '品';
+}
+
+async function submitQuickEvals() {
+  const items = [];
+  quickItems.forEach(p => {
+    if (quickDoneSet.has(p.id)) return;
+    const v = quickValues[p.id];
+    if (v && v.overall) {
+      items.push({ productId: p.id, productName: p.name, overall: v.overall, comment: v.comment || '' });
+    }
+  });
+
+  if (items.length === 0) {
+    showToast('⚠️ 少なくとも1品は評価してください', 3000, 'error');
+    return;
+  }
+
+  showLoading('送信中... (' + items.length + '品)');
+  try {
+    await gasCall('saveQuickEvals', { userId: currentUser.id, userName: currentUser.name, items });
+    hideLoading();
+    showToast('✅ ' + items.length + '品の評価を送信しました', 3000);
+    const date = quickItems[0] ? quickItems[0].date : null;
+    const products = await fetchProducts();
+    const group = products.filter(p => p.date === date);
+    await openQuickEvalForm(date, group);
+  } catch(e) {
+    hideLoading();
+    alert('送信に失敗しました。もう一度お試しください。\n' + e.message);
+  }
+}
+
+async function backToQuickList() {
+  document.getElementById('quickEvalWrapper').style.display = 'none';
   document.getElementById('staffProductList').style.display = 'block';
   await loadStaffView();
 }
