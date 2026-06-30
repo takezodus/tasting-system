@@ -237,7 +237,7 @@
     <div id="tabProducts" class="tab-panel active">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
         <div style="font-size:12px;color:var(--mid-grey);">登録済み商品</div>
-        <button class="btn btn-primary btn-sm" style="width:auto;" onclick="openAddProduct()">+ 商品を追加</button>
+        <button class="btn btn-primary btn-sm" style="width:auto;" onclick="openModeSelector()">+ 商品を追加</button>
       </div>
       <div id="adminProductGrid"></div>
     </div>
@@ -363,15 +363,59 @@
 </div>
 
 
-<!-- ADD/EDIT PRODUCT MODAL -->
+<!-- MODE SELECTOR MODAL -->
+<div class="modal-overlay" id="modeSelectorModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-title">どちらの形式で登録しますか？</div>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      <button type="button" onclick="closeModal('modeSelectorModal');openAddProduct()" style="text-align:left;padding:16px;border:1.5px solid var(--border-c);border-radius:10px;background:var(--card);cursor:pointer;font-family:inherit;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">📋 詳細評価（1品ずつ）</div>
+        <div style="font-size:12px;color:var(--text-sub);">見た目・香り・味など項目別にじっくり評価。少数の新作試食向け。</div>
+      </button>
+      <button type="button" onclick="closeModal('modeSelectorModal');openBulkAddModal()" style="text-align:left;padding:16px;border:1.5px solid var(--border-c);border-radius:10px;background:var(--card);cursor:pointer;font-family:inherit;">
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:4px;">⚡ 簡易評価（複数品まとめて）</div>
+        <div style="font-size:12px;color:var(--text-sub);">総合評価とひと言コメントだけ。15品以上の期間限定試食会向け。</div>
+      </button>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('modeSelectorModal')">キャンセル</button>
+    </div>
+  </div>
+</div>
+
+<!-- BULK ADD MODAL（簡易モード一括登録） -->
+<div class="modal-overlay" id="bulkAddModal">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-title">簡易評価：試食会を一括登録</div>
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">試食会実施日 <span style="color:var(--accent);">*</span></label>
+        <input type="date" class="form-input" id="bulkDate">
+      </div>
+      <div class="form-group">
+        <label class="form-label">試食会タイトル <span style="color:var(--mid-grey);font-weight:400;font-size:10px;">任意</span></label>
+        <input type="text" class="form-input" id="bulkTitle" placeholder="例: 居酒屋6月度期間限定試食会">
+      </div>
+    </div>
+    <div class="form-label" style="margin-top:6px;">商品リスト <span style="color:var(--accent);">*</span></div>
+    <div id="bulkItemList" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;max-height:340px;overflow-y:auto;"></div>
+    <button type="button" class="btn btn-outline btn-sm" onclick="addBulkItemRow()">+ 商品を追加する</button>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal('bulkAddModal')">キャンセル</button>
+      <button class="btn btn-dark" style="width:auto;" onclick="saveBulkProducts()">まとめて登録する</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD/EDIT PRODUCT MODAL（詳細評価） -->
 <div class="modal-overlay" id="productModal">
   <div class="modal">
-    <div class="modal-title" id="productModalTitle">商品を追加</div>
+    <div class="modal-title" id="productModalTitle">商品を追加（詳細評価）</div>
     <input type="hidden" id="editProductId">
     <div class="form-row">
       <div class="form-group">
         <label class="form-label">試食会実施日 <span style="color:var(--accent);">*</span></label>
-        <input type="date" class="form-input" id="newDate" onchange="checkSameDateMode()">
+        <input type="date" class="form-input" id="newDate">
       </div>
       <div class="form-group">
         <label class="form-label">商品名 <span style="color:var(--accent);">*</span></label>
@@ -387,14 +431,6 @@
         <label class="form-label">原価率 (%) <span style="color:var(--mid-grey);font-weight:400;font-size:10px;">任意</span></label>
         <input type="number" class="form-input" id="newCostRate" placeholder="例: 32" step="0.1" min="0" max="100">
       </div>
-    </div>
-    <div class="form-group">
-      <label class="form-label">評価モード <span style="color:var(--accent);">*</span></label>
-      <div style="display:flex;gap:10px;">
-        <button type="button" class="price-choice-btn" id="modeDetailBtn" onclick="selectMode('detail')" style="flex:1;justify-content:center;">詳細評価</button>
-        <button type="button" class="price-choice-btn" id="modeQuickBtn" onclick="selectMode('quick')" style="flex:1;justify-content:center;">簡易評価</button>
-      </div>
-      <div id="modeHint" style="font-size:11px;color:var(--text-sub);margin-top:8px;"></div>
     </div>
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal('productModal')">キャンセル</button>
@@ -553,6 +589,7 @@ async function loadAdminView() {
           <div class="date-badge" style="margin-bottom:0;">📅 ${fmtDate(p.date)}</div>
           <div style="font-size:10px;font-weight:600;background:${p.mode==='quick'?'var(--accent)':'var(--border-c)'};color:${p.mode==='quick'?'#fff':'var(--text)'};padding:2px 8px;border-radius:10px;">${p.mode==='quick'?'簡易':'詳細'}</div>
         </div>
+        ${p.title ? `<div style="font-size:11px;color:var(--accent);font-weight:700;margin-bottom:3px;">${p.title}</div>` : ''}
         <div class="product-name">${p.name}</div>
         <div class="product-meta">
           <div class="meta-item"><div class="label">販売価格</div><div class="value">${p.price?'€'+p.price:'—'}</div></div>
@@ -694,39 +731,14 @@ function deleteProduct(id) {
   showToast('削除しました');
 }
 
-let selectedMode = 'detail';
-
-function selectMode(mode) {
-  selectedMode = mode;
-  const dBtn = document.getElementById('modeDetailBtn');
-  const qBtn = document.getElementById('modeQuickBtn');
-  dBtn.classList.remove('selected-ok');
-  qBtn.classList.remove('selected-ok');
-  if (mode === 'detail') dBtn.classList.add('selected-ok');
-  if (mode === 'quick')  qBtn.classList.add('selected-ok');
-}
-
-async function checkSameDateMode() {
-  const date = document.getElementById('newDate').value;
-  const hint = document.getElementById('modeHint');
-  if (!date) { hint.textContent = ''; return; }
-  const products = await fetchProducts();
-  const sameDate = products.filter(p => p.date === date);
-  if (sameDate.length > 0) {
-    const mode = sameDate[0].mode;
-    selectMode(mode);
-    hint.textContent = `※ この日付の試食会はすでに「${mode==='quick'?'簡易評価':'詳細評価'}」モードに設定されています（統一されます）`;
-  } else {
-    hint.textContent = '';
-  }
+function openModeSelector() {
+  document.getElementById('modeSelectorModal').classList.add('open');
 }
 
 function openAddProduct() {
-  document.getElementById('productModalTitle').textContent = '商品を追加';
+  document.getElementById('productModalTitle').textContent = '商品を追加（詳細評価）';
   document.getElementById('editProductId').value = '';
   ['newDate','newName','newPrice','newCostRate'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('modeHint').textContent = '';
-  selectMode('detail');
   document.getElementById('productModal').classList.add('open');
 }
 
@@ -736,14 +748,16 @@ async function openEditProduct(id) {
   hideLoading();
   const p = products.find(x => x.id === id);
   if (!p) return;
-  document.getElementById('productModalTitle').textContent = '商品を編集';
+  if (p.mode === 'quick') {
+    alert('簡易評価モードの商品は、現在は個別編集に対応していません。削除して登録し直してください。');
+    return;
+  }
+  document.getElementById('productModalTitle').textContent = '商品を編集（詳細評価）';
   document.getElementById('editProductId').value = id;
   document.getElementById('newDate').value     = p.date     || '';
   document.getElementById('newName').value     = p.name     || '';
   document.getElementById('newPrice').value    = p.price    || '';
   document.getElementById('newCostRate').value = p.costRate || '';
-  document.getElementById('modeHint').textContent = '';
-  selectMode(p.mode || 'detail');
   document.getElementById('productModal').classList.add('open');
 }
 
@@ -779,11 +793,63 @@ async function saveProduct() {
   if (!date || !name) { alert('試食会実施日と商品名は必須です'); return; }
   showLoading('保存中...');
   const id = editId || ('p_' + Date.now());
-  await gasCall('saveProduct', { id, date, name, price, costRate, mode: selectedMode, at: new Date().toISOString() });
+  await gasCall('saveProduct', { id, date, name, price, costRate, mode: 'detail', at: new Date().toISOString() });
   closeModal('productModal');
   await loadAdminView();
   hideLoading();
   showToast(editId ? '商品を更新しました' : '商品を追加しました');
+}
+
+// ===== 簡易評価：一括登録 =====
+let bulkRowCount = 0;
+
+function openBulkAddModal() {
+  document.getElementById('bulkDate').value = '';
+  document.getElementById('bulkTitle').value = '';
+  document.getElementById('bulkItemList').innerHTML = '';
+  bulkRowCount = 0;
+  // 最初に3行分用意
+  addBulkItemRow();
+  addBulkItemRow();
+  addBulkItemRow();
+  document.getElementById('bulkAddModal').classList.add('open');
+}
+
+function addBulkItemRow() {
+  bulkRowCount++;
+  const rowId = 'bulkrow_' + bulkRowCount;
+  const list = document.getElementById('bulkItemList');
+  const row = document.createElement('div');
+  row.id = rowId;
+  row.style.cssText = 'display:flex;gap:6px;align-items:center;';
+  row.innerHTML = `
+    <input type="text" class="form-input bulk-name" placeholder="商品名" style="flex:2;">
+    <input type="number" class="form-input bulk-price" placeholder="€価格" step="0.01" style="flex:1;min-width:0;">
+    <input type="number" class="form-input bulk-cost" placeholder="原価%" step="0.1" style="flex:1;min-width:0;">
+    <button type="button" onclick="document.getElementById('${rowId}').remove()" style="background:transparent;border:none;color:var(--text-sub);font-size:18px;cursor:pointer;padding:4px 8px;flex-shrink:0;">×</button>`;
+  list.appendChild(row);
+}
+
+async function saveBulkProducts() {
+  const date  = document.getElementById('bulkDate').value;
+  const title = document.getElementById('bulkTitle').value.trim();
+  if (!date) { alert('試食会実施日は必須です'); return; }
+
+  const rows = [...document.getElementById('bulkItemList').children];
+  const items = rows.map(row => ({
+    name:     row.querySelector('.bulk-name').value.trim(),
+    price:    row.querySelector('.bulk-price').value,
+    costRate: row.querySelector('.bulk-cost').value,
+  })).filter(item => item.name);
+
+  if (items.length === 0) { alert('商品名を少なくとも1つ入力してください'); return; }
+
+  showLoading(`登録中... (${items.length}品)`);
+  await gasCall('saveProductsBulk', { date, title, mode: 'quick', items });
+  closeModal('bulkAddModal');
+  await loadAdminView();
+  hideLoading();
+  showToast(`✅ ${items.length}品を登録しました`);
 }
 
 // ===== STAFF =====
@@ -814,7 +880,7 @@ async function loadStaffView() {
     const mode = group[0].mode || 'detail';
 
     const dateHeader = document.createElement('div');
-    dateHeader.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-sub);margin:18px 0 10px;display:flex;align-items:center;gap:8px;';
+    dateHeader.style.cssText = 'font-size:13px;font-weight:700;color:var(--text-sub);margin:18px 0 10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;';
     dateHeader.innerHTML = `📅 ${fmtDate(date)}　<span style="font-size:11px;font-weight:500;background:${mode==='quick'?'var(--accent)':'var(--border-c)'};color:${mode==='quick'?'#fff':'var(--text)'};padding:2px 9px;border-radius:10px;">${mode==='quick'?'簡易評価':'詳細評価'}</span>`;
     grid.appendChild(dateHeader);
 
@@ -823,11 +889,13 @@ async function loadStaffView() {
       const doneInfo = await gasCall('getMyEvalsForDate', { date, userId: currentUser.id });
       const doneCount = doneInfo.filter(x => x.done).length;
       const allDone = doneCount === group.length;
+      const title = group[0].title;
 
       const quickCard = document.createElement('div');
       quickCard.className = 'product-card';
       quickCard.style.cssText = 'margin-bottom:8px;';
       quickCard.innerHTML = `
+        ${title ? `<div style="font-size:12px;color:var(--accent);font-weight:700;margin-bottom:4px;">${title}</div>` : ''}
         <div class="product-name">${group.length}品を一括評価</div>
         <div style="font-size:12px;color:var(--text-sub);margin-top:4px;">進捗: ${doneCount} / ${group.length}品 完了</div>
         <div style="margin-top:12px;">
@@ -954,7 +1022,7 @@ let quickDoneSet = new Set(); // すでに送信済みのproductId
 async function openQuickEvalForm(date, products) {
   document.getElementById('staffProductList').style.display = 'none';
   document.getElementById('quickEvalWrapper').style.display = 'block';
-  document.getElementById('quickEvalTitle').textContent = fmtDate(date) + 'の試食会';
+  document.getElementById('quickEvalTitle').textContent = (products[0] && products[0].title) ? products[0].title : (fmtDate(date) + 'の試食会');
   document.getElementById('quickEvalMeta').textContent = products.length + '品を評価';
 
   quickItems = products;
